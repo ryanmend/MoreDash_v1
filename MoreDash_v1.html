@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Race Car Instrument Cluster</title>
+    <!-- Importing a tech/scifi font to match the aesthetic -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- RESET & BASE STYLES --- */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #000;
+            color: #fff;
+            font-family: 'Orbitron', sans-serif;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden; /* Prevent scrollbars */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* --- DASHBOARD CONTAINER --- */
+        .dashboard {
+            width: 95vw;
+            height: 85vh; /* Aspect ratio roughly matching the image */
+            max-width: 1400px;
+            background: radial-gradient(circle at center, #1a1a1a 0%, #000000 100%);
+            border: 1px solid #333;
+            position: relative;
+            display: grid;
+            grid-template-rows: 35% 30% 35%; /* RPM Area, Stats Area, Bottom Area */
+            padding: 20px;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+        }
+
+        /* --- COLORS --- */
+        :root {
+            --red-accent: #e60000;
+            --text-dim: #888;
+            --text-bright: #fff;
+            --bar-bg: #333;
+            --bar-fill: #e0e0e0;
+        }
+
+        /* --- TOP SECTION: RPM GAUGE --- */
+        .top-section {
+            position: relative;
+            width: 100%;
+            display: flex;
+        }
+
+        canvas#rpmGauge {
+            width: 85%;
+            height: 100%;
+            display: block;
+        }
+
+        .rpm-readout {
+            width: 15%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-end;
+            padding-right: 10px;
+            border-left: 2px solid #333;
+            background: linear-gradient(to right, rgba(0,0,0,0), rgba(50,0,0,0.2));
+        }
+
+        .rpm-value {
+            font-size: 3vw;
+            font-weight: 700;
+            color: var(--text-bright);
+            line-height: 1;
+        }
+
+        .rpm-label {
+            font-size: 1vw;
+            color: var(--red-accent);
+            margin-top: 5px;
+        }
+
+        /* --- MIDDLE SECTION: DATA GRID --- */
+        .middle-section {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr); /* 4 columns for stats */
+            grid-template-rows: 1fr 1fr;
+            gap: 10px;
+            padding: 20px 50px 0 150px; /* Offset to clear the diagonal RPM start */
+            align-items: center;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-label {
+            color: var(--text-dim);
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.2rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            color: var(--text-bright);
+            font-size: 1.5rem;
+            font-weight: 500;
+        }
+
+        /* --- BOTTOM SECTION: INDICATORS --- */
+        .bottom-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding: 20px;
+        }
+
+        /* Tyres */
+        .tyres-container {
+            width: 20%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .tyres-label {
+            color: var(--text-dim);
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .tyres-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .tyre {
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 5px;
+            text-align: center;
+            position: relative;
+        }
+        
+        /* Visualizing the tyre shape */
+        .tyre::before {
+            content: '';
+            display: block;
+            height: 3px;
+            width: 60%;
+            margin: 0 auto 5px auto;
+            background: #444;
+        }
+
+        .tyre-val {
+            font-size: 0.9rem;
+            color: var(--text-bright);
+        }
+        .tyre-percent {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+        }
+
+        /* Center: Speed */
+        .speed-container {
+            flex-grow: 1;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+        }
+
+        .speed-label {
+            font-size: 1.5rem;
+            color: var(--text-dim);
+            letter-spacing: 2px;
+        }
+
+        .speed-value {
+            font-size: 8rem;
+            font-weight: 900;
+            line-height: 1;
+            /* Text glow effect */
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.1); 
+        }
+
+        .deco-dots {
+            color: var(--text-dim);
+            font-size: 1.5rem;
+            letter-spacing: 5px;
+            margin: 0 20px;
+            opacity: 0.5;
+        }
+        
+        .center-row {
+            display: flex;
+            align-items: baseline;
+        }
+
+        /* Right: Gear */
+        .gear-container {
+            width: 20%;
+            text-align: right;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .gear-label {
+            font-size: 1.5rem;
+            color: var(--text-dim);
+            margin-bottom: 0px;
+            text-transform: uppercase;
+        }
+
+        .gear-value {
+            font-size: 8rem;
+            font-weight: 900;
+            line-height: 1;
+            color: var(--text-bright);
+        }
+
+        .time-display {
+            margin-top: 20px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.5rem;
+            color: var(--text-dim);
+        }
+        
+        /* Mobile/Small screen adjustments */
+        @media (max-width: 800px) {
+            .dashboard { height: 100vh; width: 100vw; }
+            .middle-section { padding-left: 20px; }
+            .speed-value, .gear-value { font-size: 4rem; }
+            .rpm-value { font-size: 1.5rem; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="dashboard">
+        
+        <!-- TOP: RPM Canvas & Readout -->
+        <div class="top-section">
+            <canvas id="rpmGauge"></canvas>
+            <div class="rpm-readout">
+                <div class="rpm-value" id="rpmText">0</div>
+                <div class="rpm-label">RPM</div>
+            </div>
+        </div>
+
+        <!-- MIDDLE: Stats Grid -->
+        <div class="middle-section">
+            <div class="stat-box">
+                <div class="stat-label">Pos</div>
+                <div class="stat-value">1</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Lap time</div>
+                <div class="stat-value" id="lapTime">1:34.20</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Last lap</div>
+                <div class="stat-value">1:35.45</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Best Lap time</div>
+                <div class="stat-value">1:33.90</div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-label">Max speed</div>
+                <div class="stat-value">312</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Est. Lap time</div>
+                <div class="stat-value" id="estLap">1:34.10</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Last lap cons.</div>
+                <div class="stat-value">2.4 L</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Est. fuel laps</div>
+                <div class="stat-value">14.2</div>
+            </div>
+        </div>
+
+        <!-- BOTTOM: Tyres, Speed, Gear, Time -->
+        <div class="bottom-section">
+            
+            <div class="tyres-container">
+                <div class="tyres-label">Tyres</div>
+                <div class="tyres-grid">
+                    <!-- FL -->
+                    <div class="tyre">
+                        <div class="tyre-val">85°</div>
+                        <div class="tyre-percent" id="tp-fl">100%</div>
+                    </div>
+                    <!-- FR -->
+                    <div class="tyre">
+                        <div class="tyre-val">88°</div>
+                        <div class="tyre-percent" id="tp-fr">100%</div>
+                    </div>
+                    <!-- RL -->
+                    <div class="tyre">
+                        <div class="tyre-val">90°</div>
+                        <div class="tyre-percent" id="tp-rl">100%</div>
+                    </div>
+                    <!-- RR -->
+                    <div class="tyre">
+                        <div class="tyre-val">91°</div>
+                        <div class="tyre-percent" id="tp-rr">100%</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="speed-container">
+                <div class="speed-label">KMH</div>
+                <div class="center-row">
+                    <span class="deco-dots">.........</span>
+                    <div class="speed-value" id="speedText">0</div>
+                    <span class="deco-dots">.........</span>
+                </div>
+            </div>
+
+            <div class="gear-container">
+                <div class="gear-label">GEAR</div>
+                <div class="gear-value" id="gearText">N</div>
+                <div class="time-display" id="timeText">00:00:00</div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        /* * DASHBOARD LOGIC
+         * Handles the RPM Gauge drawing (Canvas) and the Vehicle Simulation Loop.
+         */
+
+        const canvas = document.getElementById('rpmGauge');
+        const ctx = canvas.getContext('2d');
+        
+        // DOM Elements
+        const rpmTextEl = document.getElementById('rpmText');
+        const speedTextEl = document.getElementById('speedText');
+        const gearTextEl = document.getElementById('gearText');
+        const timeTextEl = document.getElementById('timeText');
+        
+        // Tyre Elements
+        const tyreEls = [
+            document.getElementById('tp-fl'),
+            document.getElementById('tp-fr'),
+            document.getElementById('tp-rl'),
+            document.getElementById('tp-rr')
+        ];
+
+        // Simulation State
+        let state = {
+            rpm: 1000,
+            maxRpm: 10000,
+            gear: 0, // 0=N, 1=1, etc.
+            speed: 0,
+            accelerating: true,
+            tyrePressures: [99.5, 99.8, 100.2, 100.1]
+        };
+
+        // Constants for simulation
+        const GEAR_RATIOS = [0, 3.5, 2.5, 1.8, 1.4, 1.1]; // N, 1, 2, 3, 4, 5
+        const FINAL_DRIVE = 3.0;
+        const SHIFT_RPM = 9600;
+        const IDLE_RPM = 1000;
+        const SHIFT_DROP_RATIO = 0.7; // RPM drops to 70% after upshift
+
+        // Resize canvas to handle high DPI displays nicely
+        function resizeCanvas() {
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+            // Store logical dimensions for drawing
+            canvas.logicalWidth = rect.width;
+            canvas.logicalHeight = rect.height;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        /*
+         * DRAWING THE RPM GAUGE
+         * The gauge consists of a diagonal line that transitions into a horizontal line.
+         */
+        function drawRPM(rpm) {
+            const w = canvas.logicalWidth;
+            const h = canvas.logicalHeight;
+            const max = state.maxRpm;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, w, h);
+
+            // Configuration for the bar
+            const barHeight = h * 0.45; 
+            const startX = 20;
+            const startY = h - 20; // Bottom leftish
+            const cornerX = w * 0.35; // Where diagonal meets horizontal
+            const cornerY = 20; // Top
+            const endX = w - 20;
+            const endY = 20;
+
+            // --- Helper: Draw the path ---
+            // We use 'moveTo' and 'lineTo' to define the centerline of the gauge
+            function createPath() {
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+                ctx.lineTo(cornerX, cornerY);
+                ctx.lineTo(endX, endY);
+            }
+
+            // 1. Calculate lengths of segments to determine fill percentage
+            // Distance 1 (Diagonal)
+            const d1 = Math.sqrt(Math.pow(cornerX - startX, 2) + Math.pow(cornerY - startY, 2));
+            // Distance 2 (Horizontal)
+            const d2 = endX - cornerX;
+            const totalDist = d1 + d2;
+
+            // 2. Draw Background (Empty Gauge)
+            ctx.lineCap = 'butt';
+            ctx.lineJoin = 'round';
+            ctx.lineWidth = barHeight;
+            ctx.strokeStyle = '#222'; // Dark grey background
+            createPath();
+            ctx.stroke();
+
+            // 3. Draw Red Borders (Top and Bottom of the bar)
+            // We do this by calculating offsets. A simple way is to draw thin lines parallel to main path.
+            // Since strokes are centered, we offset Y.
+            // Note: This is a simplification. For perfect borders on thick diagonals, complex geometry is needed.
+            // For this simulation, drawing lines "above" and "below" via distinct paths is effective.
+            
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#cc0000';
+            
+            // Top Border
+            const topOffset = barHeight / 2;
+            ctx.beginPath();
+            ctx.moveTo(startX, startY - topOffset); 
+            ctx.lineTo(cornerX - (topOffset*0.5), cornerY - topOffset); // Slight adjust for corner join
+            ctx.lineTo(endX, endY - topOffset);
+            ctx.stroke();
+
+            // Bottom Border
+            ctx.beginPath();
+            ctx.moveTo(startX, startY + topOffset);
+            ctx.lineTo(cornerX + (topOffset*0.5), cornerY + topOffset);
+            ctx.lineTo(endX, endY + topOffset);
+            ctx.stroke();
+
+
+            // 4. Draw Fill (Based on RPM)
+            const fillPct = Math.min(rpm / max, 1);
+            const fillLength = totalDist * fillPct;
+
+            ctx.lineWidth = barHeight - 4; // Slightly smaller to fit inside borders
+            ctx.strokeStyle = '#e0e0e0'; // White/Grey fill
+
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+
+            if (fillLength <= d1) {
+                // Only on diagonal part
+                // Interpolate point
+                const t = fillLength / d1;
+                const curX = startX + (cornerX - startX) * t;
+                const curY = startY + (cornerY - startY) * t;
+                ctx.lineTo(curX, curY);
+            } else {
+                // Diagonal full + some horizontal
+                ctx.lineTo(cornerX, cornerY);
+                const rem = fillLength - d1;
+                const curX = cornerX + rem;
+                ctx.lineTo(curX, cornerY);
+            }
+            ctx.stroke();
+
+
+            // 5. Draw Grid/Segments (Black lines to cut the bar)
+            // We assume ~10 segments for 10,000 RPM
+            const segments = 10;
+            ctx.strokeStyle = '#000'; // Color of the gap
+            ctx.lineWidth = 2;
+
+            for (let i = 1; i < segments; i++) {
+                // Find position on path at i/10
+                const targetLen = (totalDist / segments) * i;
+                let sx, sy;
+                
+                if (targetLen <= d1) {
+                    const t = targetLen / d1;
+                    sx = startX + (cornerX - startX) * t;
+                    sy = startY + (cornerY - startY) * t;
+                } else {
+                    const rem = targetLen - d1;
+                    sx = cornerX + rem;
+                    sy = cornerY;
+                }
+
+                // Draw a vertical-ish cut.
+                // For diagonal part, a vertical cut works fine visually for this style.
+                ctx.beginPath();
+                ctx.moveTo(sx, sy - barHeight/2);
+                ctx.lineTo(sx, sy + barHeight/2);
+                ctx.stroke();
+            }
+            
+            // Add text markers 10, 10
+            ctx.fillStyle = "#fff";
+            ctx.font = "12px Orbitron";
+            ctx.fillText("10", endX - (d2/2), endY - barHeight/2 - 5);
+        }
+
+
+        /*
+         * SIMULATION LOOP
+         * Updates physics and DOM elements
+         */
+        function updatePhysics() {
+            // 1. Gear and RPM Logic
+            if (state.accelerating) {
+                state.rpm += 80 + (Math.random() * 20); // Rev up
+                
+                // Shift Logic
+                if (state.rpm > SHIFT_RPM) {
+                    if (state.gear < 5) {
+                        state.gear++;
+                        state.rpm = state.rpm * SHIFT_DROP_RATIO; // Drop RPM
+                    } else {
+                        // Top gear limiter
+                        state.rpm = SHIFT_RPM - (Math.random() * 200);
+                        // Occasionally brake/reset to simulate corner
+                        if(Math.random() > 0.995) {
+                            state.accelerating = false;
+                        }
+                    }
+                }
+            } else {
+                // Decelerating (Braking)
+                state.rpm -= 150;
+                if (state.rpm < 4000 && state.gear > 1) {
+                    state.gear--; // Downshift
+                    state.rpm = 7000; // Rev match
+                } else if (state.rpm < IDLE_RPM) {
+                    state.rpm = IDLE_RPM;
+                    state.gear = 0; // Neutral
+                    state.accelerating = true; // Start again
+                }
+            }
+
+            // Start logic (from N to 1)
+            if (state.gear === 0 && state.rpm > 4000) {
+                state.gear = 1;
+                state.rpm = 2000;
+            }
+
+
+            // 2. Speed Calculation
+            // Speed = RPM * GearRatio * Constant
+            let ratio = state.gear === 0 ? 0 : GEAR_RATIOS[state.gear];
+            // Normalize logic: 10000rpm in 5th gear (ratio 1.1) ~= 320kmh
+            // Speed = (RPM / 10000) * (300 * (1.1 / Ratio)) ... approximation
+            // Simpler: Speed proportional to RPM * GearFactor
+            let speedFactor = [0, 0.008, 0.012, 0.018, 0.024, 0.032];
+            state.speed = Math.floor(state.rpm * speedFactor[state.gear]);
+
+
+            // 3. Tyre Pressure Random Walk
+            state.tyrePressures = state.tyrePressures.map(p => {
+                let change = (Math.random() - 0.5) * 0.1;
+                let newP = p + change;
+                if(newP > 105) newP = 105;
+                if(newP < 95) newP = 95;
+                return newP;
+            });
+        }
+
+
+        function drawLoop() {
+            updatePhysics();
+
+            // Render Canvas
+            drawRPM(state.rpm);
+
+            // Update DOM Text
+            rpmTextEl.textContent = Math.floor(state.rpm);
+            speedTextEl.textContent = state.speed;
+            gearTextEl.textContent = state.gear === 0 ? "N" : state.gear;
+
+            // Update Tyres
+            tyreEls.forEach((el, i) => {
+                el.textContent = state.tyrePressures[i].toFixed(1) + "%";
+            });
+
+            requestAnimationFrame(drawLoop);
+        }
+
+
+        /*
+         * CLOCK & UTILS
+         */
+        setInterval(() => {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-GB', { hour12: false });
+            timeTextEl.textContent = timeStr;
+        }, 1000);
+
+        // Start
+        requestAnimationFrame(drawLoop);
+
+    </script>
+</body>
+</html>
